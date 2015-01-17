@@ -1123,12 +1123,18 @@ define('scale_finder',['./constants', './event_target', './scale'], function(con
         this.scales = {};
         this.scaleReadyCallbacks = {};
         this.adapterState = null;
+        this.failed = false;
 
-        chrome.bluetooth.onAdapterStateChanged.addListener(this.adapterStateChanged.bind(this));
-        chrome.bluetooth.onDeviceAdded.addListener(this.deviceAdded.bind(this));
-        chrome.bluetoothLowEnergy.onServiceAdded.addListener(this.serviceAdded.bind(this));
+        if (typeof chrome !== 'undefined' && chrome.bluetooth && chrome.bluetoothLowEnergy) {
+            chrome.bluetooth.onAdapterStateChanged.addListener(this.adapterStateChanged.bind(this));
+            chrome.bluetooth.onDeviceAdded.addListener(this.deviceAdded.bind(this));
+            chrome.bluetoothLowEnergy.onServiceAdded.addListener(this.serviceAdded.bind(this));
 
-        chrome.bluetooth.getAdapterState(this.adapterStateChanged.bind(this));
+            chrome.bluetooth.getAdapterState(this.adapterStateChanged.bind(this));
+        } else {
+            console.log("couldn't find chrome.bluetooth APIs");
+            this.failed = true;
+        }
     }
 
     ScaleFinder.prototype = new event_target.EventTarget();
