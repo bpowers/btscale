@@ -943,6 +943,8 @@ define('scale',['./constants', './event_target', './packet', './recorder'], func
         if (service.uuid !== SCALE_SERVICE_UUID)
             return;
 
+        this.service = service;
+
         chrome.bluetoothLowEnergy.getCharacteristics(
             this.service.instanceId,
             this.allCharacteristics.bind(this));
