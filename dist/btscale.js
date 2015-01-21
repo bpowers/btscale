@@ -934,13 +934,14 @@ define('scale',['./constants', './event_target', './packet', './recorder'], func
             console.log('connect failed: ' + chrome.runtime.lastError.message);
             return;
         }
-
         chrome.bluetoothLowEnergy.getServices(this.device.address,
                                               this.servicesAdded.bind(this));
     };
 
     Scale.prototype.serviceAdded = function(service) {
         if (service.uuid !== SCALE_SERVICE_UUID)
+            return;
+        if (this.service)
             return;
 
         this.service = service;
@@ -1026,6 +1027,8 @@ define('scale',['./constants', './event_target', './packet', './recorder'], func
             // FIXME(bp) exit early once this call succeeds on android.
             //return;
         }
+
+        console.log('scale ready');
 
         this.connected = true;
 
