@@ -896,26 +896,64 @@ define('recorder',[], function() {
 define('scale',['./constants', './event_target', './packet', './recorder'], function(constants, event_target, packet, recorder) {
     
 
-    function Scale(device, service) {
-        this.initialized = false;
+    var SCALE_CHARACTERISTIC_UUID = constants.SCALE_CHARACTERISTIC_UUID;
+    var SCALE_SERVICE_UUID = constants.SCALE_SERVICE_UUID;
+    var MessageType = constants.MessageType;
+
+    function Scale(device) {
+        this.connected = false;
         this.name = device.name;
         this.device = device;
-        this.service = service;
+        this.service = null;
         this.characteristic = null;
         this.weight = null;
         this.recorder = null;
-
-        chrome.bluetoothLowEnergy.onCharacteristicValueChanged.addListener(
-            this.characteristicValueChanged.bind(this));
-
-        chrome.bluetoothLowEnergy.getCharacteristics(
-            this.service.instanceId,
-            this.allCharacteristics.bind(this));
 
         console.log('created scale for ' + this.device.address + ' (' + this.device.name + ')');
     }
 
     Scale.prototype = new event_target.EventTarget();
+
+    Scale.prototype.connect = function() {
+        if (this.connected)
+            return;
+
+        chrome.bluetoothLowEnergy.onServiceAdded.addListener(
+            this.serviceAdded.bind(this));
+        chrome.bluetoothLowEnergy.onCharacteristicValueChanged.addListener(
+            this.characteristicValueChanged.bind(this));
+
+        chrome.bluetoothLowEnergy.connect(
+            this.device.address,
+            {'persistent': true},
+            this.deviceConnected.bind(this));
+    };
+
+    Scale.prototype.deviceConnected = function() {
+        if (chrome.runtime.lastError) {
+            console.log('connect failed: ' + chrome.runtime.lastError.message);
+            return;
+        }
+
+        chrome.bluetoothLowEnergy.getServices(this.device.address,
+                                              this.servicesAdded.bind(this));
+    };
+
+    Scale.prototype.serviceAdded = function(service) {
+        if (service.uuid !== SCALE_SERVICE_UUID)
+            return;
+
+        chrome.bluetoothLowEnergy.getCharacteristics(
+            this.service.instanceId,
+            this.allCharacteristics.bind(this));
+    };
+
+    Scale.prototype.servicesAdded = function(services) {
+        for (var i in services) {
+            var service = services[i];
+            this.serviceAdded(service);
+        }
+    };
 
     Scale.prototype.characteristicValueChanged = function(event) {
         var msg = packet.decode(event.value);
@@ -924,7 +962,7 @@ define('scale',['./constants', './event_target', './packet', './recorder'], func
             return;
         }
 
-        if (msg.type === constants.MessageType.WEIGHT_RESPONSE) {
+        if (msg.type === MessageType.WEIGHT_RESPONSE) {
             var prevWeight = this.weight;
             var shouldDispatchChanged = this.weight !== msg.value;
             this.weight = msg.value;
@@ -937,7 +975,7 @@ define('scale',['./constants', './event_target', './packet', './recorder'], func
             this.dispatchEvent(new CustomEvent('weightMeasured', detail));
             if (shouldDispatchChanged)
                 this.dispatchEvent(new CustomEvent('weightChanged', detail));
-        } else if (msg.type === constants.MessageType.BATTERY_RESPONSE) {
+        } else if (msg.type === MessageType.BATTERY_RESPONSE) {
             var cb = this.batteryCb;
             this.batteryCb = null;
             if (cb)
@@ -949,102 +987,8 @@ define('scale',['./constants', './event_target', './packet', './recorder'], func
     };
 
     Scale.prototype.disconnect = function() {
-        this.initialized = false;
+        this.connected = false;
         chrome.bluetoothLowEnergy.disconnect(this.device.address);
-    };
-
-    Scale.prototype.logError = function() {
-        if (chrome.runtime.lastError)
-            console.log('bluetooth call failed: ' + chrome.runtime.lastError.message);
-    };
-
-    Scale.prototype.tare = function() {
-        if (!this.initialized)
-            return false;
-
-        var msg = packet.encodeTare();
-
-        chrome.bluetoothLowEnergy.writeCharacteristicValue(
-            this.characteristic.instanceId, msg, this.logError.bind(this));
-
-        return true;
-    };
-
-    Scale.prototype.startTimer = function() {
-        if (!this.initialized)
-            return false;
-
-        var msg = packet.encodeStartTimer();
-
-        chrome.bluetoothLowEnergy.writeCharacteristicValue(
-            this.characteristic.instanceId, msg, this.logError.bind(this));
-
-        return true;
-    };
-
-    Scale.prototype.pauseTimer = function() {
-        if (!this.initialized)
-            return false;
-
-        var msg = packet.encodePauseTimer();
-
-        chrome.bluetoothLowEnergy.writeCharacteristicValue(
-            this.characteristic.instanceId, msg, this.logError.bind(this));
-
-        return true;
-    };
-
-    Scale.prototype.stopTimer = function() {
-        if (!this.initialized)
-            return false;
-
-        var msg = packet.encodeStopTimer();
-
-        chrome.bluetoothLowEnergy.writeCharacteristicValue(
-            this.characteristic.instanceId, msg, this.logError.bind(this));
-
-        return true;
-    };
-
-    Scale.prototype.getTimer = function(count) {
-        if (!this.initialized)
-            return false;
-
-        if (!count)
-            count = 1;
-
-        var msg = packet.encodeGetTimer(count);
-
-        chrome.bluetoothLowEnergy.writeCharacteristicValue(
-            this.characteristic.instanceId, msg, this.logError.bind(this));
-
-        return true;
-    };
-
-    Scale.prototype.getBattery = function(cb) {
-        if (!this.initialized)
-            return false;
-
-        this.batteryCb = cb;
-
-        var msg = packet.encodeGetBattery();
-
-        chrome.bluetoothLowEnergy.writeCharacteristicValue(
-            this.characteristic.instanceId, msg, this.logError.bind(this));
-
-        return true;
-    };
-
-    Scale.prototype.poll = function() {
-        if (!this.initialized)
-            return false;
-
-        var msg = packet.encodeWeight();
-
-        chrome.bluetoothLowEnergy.writeCharacteristicValue(
-            this.characteristic.instanceId, msg, this.logError.bind(this));
-
-        return true;
     };
 
     Scale.prototype.allCharacteristics = function(characteristics) {
@@ -1056,7 +1000,7 @@ define('scale',['./constants', './event_target', './packet', './recorder'], func
 
         var found = false;
         for (var i = 0; i < characteristics.length; i++) {
-            if (characteristics[i].uuid == constants.SCALE_CHARACTERISTIC_UUID) {
+            if (characteristics[i].uuid == SCALE_CHARACTERISTIC_UUID) {
                 this.characteristic = characteristics[i];
                 found = true;
                 break;
@@ -1081,12 +1025,106 @@ define('scale',['./constants', './event_target', './packet', './recorder'], func
             //return;
         }
 
-        this.initialized = true;
+        this.connected = true;
 
         this.poll();
         setInterval(this.poll.bind(this), 1000);
 
         this.dispatchEvent(new CustomEvent('ready', {'detail': {'scale': this}}));
+    };
+
+    Scale.prototype.logError = function() {
+        if (chrome.runtime.lastError)
+            console.log('bluetooth call failed: ' + chrome.runtime.lastError.message);
+    };
+
+    Scale.prototype.tare = function() {
+        if (!this.connected)
+            return false;
+
+        var msg = packet.encodeTare();
+
+        chrome.bluetoothLowEnergy.writeCharacteristicValue(
+            this.characteristic.instanceId, msg, this.logError.bind(this));
+
+        return true;
+    };
+
+    Scale.prototype.startTimer = function() {
+        if (!this.connected)
+            return false;
+
+        var msg = packet.encodeStartTimer();
+
+        chrome.bluetoothLowEnergy.writeCharacteristicValue(
+            this.characteristic.instanceId, msg, this.logError.bind(this));
+
+        return true;
+    };
+
+    Scale.prototype.pauseTimer = function() {
+        if (!this.connected)
+            return false;
+
+        var msg = packet.encodePauseTimer();
+
+        chrome.bluetoothLowEnergy.writeCharacteristicValue(
+            this.characteristic.instanceId, msg, this.logError.bind(this));
+
+        return true;
+    };
+
+    Scale.prototype.stopTimer = function() {
+        if (!this.connected)
+            return false;
+
+        var msg = packet.encodeStopTimer();
+
+        chrome.bluetoothLowEnergy.writeCharacteristicValue(
+            this.characteristic.instanceId, msg, this.logError.bind(this));
+
+        return true;
+    };
+
+    Scale.prototype.getTimer = function(count) {
+        if (!this.connected)
+            return false;
+
+        if (!count)
+            count = 1;
+
+        var msg = packet.encodeGetTimer(count);
+
+        chrome.bluetoothLowEnergy.writeCharacteristicValue(
+            this.characteristic.instanceId, msg, this.logError.bind(this));
+
+        return true;
+    };
+
+    Scale.prototype.getBattery = function(cb) {
+        if (!this.connected)
+            return false;
+
+        this.batteryCb = cb;
+
+        var msg = packet.encodeGetBattery();
+
+        chrome.bluetoothLowEnergy.writeCharacteristicValue(
+            this.characteristic.instanceId, msg, this.logError.bind(this));
+
+        return true;
+    };
+
+    Scale.prototype.poll = function() {
+        if (!this.connected)
+            return false;
+
+        var msg = packet.encodeWeight();
+
+        chrome.bluetoothLowEnergy.writeCharacteristicValue(
+            this.characteristic.instanceId, msg, this.logError.bind(this));
+
+        return true;
     };
 
     Scale.prototype.startRecording = function() {
@@ -1120,15 +1158,13 @@ define('scale_finder',['./constants', './event_target', './scale'], function(con
     function ScaleFinder() {
         this.ready = false;
         this.devices = {};
-        this.scales = {};
-        this.scaleReadyCallbacks = {};
+        this.scales = [];
         this.adapterState = null;
         this.failed = false;
 
         if (typeof chrome !== 'undefined' && chrome.bluetooth && chrome.bluetoothLowEnergy) {
             chrome.bluetooth.onAdapterStateChanged.addListener(this.adapterStateChanged.bind(this));
             chrome.bluetooth.onDeviceAdded.addListener(this.deviceAdded.bind(this));
-            chrome.bluetoothLowEnergy.onServiceAdded.addListener(this.serviceAdded.bind(this));
 
             chrome.bluetooth.getAdapterState(this.adapterStateChanged.bind(this));
         } else {
@@ -1170,58 +1206,9 @@ define('scale_finder',['./constants', './event_target', './scale'], function(con
             console.log('WARN: device added that is already known ' + device.address);
             return;
         }
-        this.devices[device.address] = device;
-        this.currentDevice = device;
-
-        chrome.bluetoothLowEnergy.connect(device.address,
-                                          {'persistent': true},
-                                          this.deviceConnected.bind(this));
-    };
-
-    ScaleFinder.prototype.deviceConnected = function() {
-        if (chrome.runtime.lastError) {
-            console.log('connect failed: ' + chrome.runtime.lastError.message);
-            return;
-        }
-
-        chrome.bluetoothLowEnergy.getServices(this.currentDevice.address,
-                                              this.servicesAdded.bind(this));
-    };
-
-    ScaleFinder.prototype.serviceAdded = function(service) {
-        if (service.uuid !== constants.SCALE_SERVICE_UUID)
-            return;
-
-        var device = this.devices[service.deviceAddress];
-        if (device.address in this.scales) {
-            console.log('rediscovery of ' + device.address);
-            return;
-        }
-        var scale = new Scale(device, service);
-        this.scales[device.address] = scale;
-        var readyCallback = this.scaleReady.bind(this);
-        this.scaleReadyCallbacks[scale] = readyCallback;
-
-        // to simplify development elsewhere, fire the ScaleFinder's
-        // scaleAdded event after the scale is ready to be used.
-        scale.addEventListener('ready', readyCallback);
-    };
-
-    ScaleFinder.prototype.servicesAdded = function(services) {
-        for (var i in services) {
-            var service = services[i];
-            this.serviceAdded(service);
-        }
-    };
-
-    ScaleFinder.prototype.scaleReady = function(event) {
-        var scale = event.detail.scale;
-        var readyCallback = this.scaleReadyCallbacks[scale];
-        scale.removeEventListener('ready', readyCallback);
-        delete this.scaleReadyCallbacks[scale];
-
-        event = new CustomEvent('scaleAdded', {'detail': {'scale': scale}});
-        this.dispatchEvent(event);
+        var scale = new Scale(device);
+        this.devices[device.address] = scale;
+        this.scales.push(scale);
     };
 
     ScaleFinder.prototype.logDiscovery = function() {
@@ -1231,10 +1218,14 @@ define('scale_finder',['./constants', './event_target', './scale'], function(con
     };
 
     ScaleFinder.prototype.startDiscovery = function() {
+        if (this.failed)
+            return;
         chrome.bluetooth.startDiscovery(this.logDiscovery);
     };
 
     ScaleFinder.prototype.stopDiscovery = function() {
+        if (this.failed)
+            return;
         chrome.bluetooth.stopDiscovery(this.logDiscovery);
     };
 
