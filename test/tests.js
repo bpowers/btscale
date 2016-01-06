@@ -13,9 +13,10 @@ define(['../lib/constants', '../lib/packet'], function(constants, packet) {
 
     var contentsEqual = function(test, msg, ref) {
         var ok = true;
+        var bytes = new Uint8Array(msg);
         for (var i = 0; i < msg.byteLength; i++) {
-            ok &= msg[i] === ref[i];
-            test.ok(msg[i] === ref[i], 'position ' + i + ' matches');
+            ok &= bytes[i] === ref[i];
+            test.ok(bytes[i] === ref[i], 'position ' + i + ' matches: ' + bytes[i] + ' != ' + ref[i]);
         }
         return ok;
     };

@@ -442,7 +442,7 @@ define("vendor/almond", function(){});
 // license that can be found in the LICENSE file.
 
 define('constants',[], function() {
-    
+    'use strict';
 
     var constants = {};
 
@@ -554,7 +554,7 @@ define('constants',[], function() {
  */
 
 define('event_target',[], function() {
-    
+    'use strict';
 
     /**
      * Creates a new EventTarget. This class implements the DOM level 2
@@ -652,7 +652,7 @@ define('event_target',[], function() {
 // license that can be found in the LICENSE file.
 
 define('packet',['./constants'], function(constants) {
-    
+    'use strict';
 
     // TODO(bp) this is a guess
     var MAX_PAYLOAD_LENGTH = 10;
@@ -856,7 +856,7 @@ define('packet',['./constants'], function(constants) {
 // license that can be found in the LICENSE file.
 
 define('recorder',[], function() {
-    
+    'use strict';
 
     function Recorder(scale) {
         this.start = Date.now()/1000;
@@ -894,7 +894,7 @@ define('recorder',[], function() {
 // license that can be found in the LICENSE file.
 
 define('scale',['./constants', './event_target', './packet', './recorder'], function(constants, event_target, packet, recorder) {
-    
+    'use strict';
 
     var SCALE_CHARACTERISTIC_UUID = constants.SCALE_CHARACTERISTIC_UUID;
     var SCALE_SERVICE_UUID = constants.SCALE_SERVICE_UUID;
@@ -1156,7 +1156,7 @@ define('scale',['./constants', './event_target', './packet', './recorder'], func
 // license that can be found in the LICENSE file.
 
 define('scale_finder',['./constants', './event_target', './scale'], function(constants, event_target, scale) {
-    
+    'use strict';
 
     var Scale = scale.Scale;
 
@@ -1244,7 +1244,7 @@ define('scale_finder',['./constants', './event_target', './scale'], function(con
 // license that can be found in the LICENSE file.
 
 define('btscale',['./scale_finder'], function(scale_finder) {
-    
+    'use strict';
 
     return {
         ScaleFinder: scale_finder.ScaleFinder,
