@@ -1,6 +1,6 @@
 {
   "name": "btscale",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "access Bluetooth LE scales from Javascript",
   "homepage": "https://github.com/bpowers/btscale",
   "keywords": [
@@ -8,19 +8,26 @@
     "coffee",
     "acaia"
   ],
-  "license": "MIT",
+  "license": "ISC",
   "repository": {
     "type": "git",
     "url": "https://github.com/bpowers/btscale.git"
   },
   "dependencies": {},
   "devDependencies": {
-    "jshint": "~2.5.0",
-    "nodeunit": "~0.8.6",
-    "requirejs": "~2.1.11",
-    "uglify-js": "~2.4.13"
+    "chai": "^3.4.1",
+    "gulp": "^3.9.0",
+    "gulp-mocha": "^2.2.0",
+    "gulp-tslint": "^3.6.0",
+    "gulp-typescript": "^2.9.2",
+    "merge2": "^0.3.6",
+    "mocha": "^2.3.4",
+    "requirejs": "^2.1.20",
+    "tsd": "^0.6.5",
+    "typescript": "^1.6.2",
+    "uglify-js": "^2.4.24"
   },
   "engines": {
-    "node": ">=0.10.24"
+    "node": ">=4.0.0"
   }
 }

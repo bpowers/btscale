@@ -1,40 +1,48 @@
-# if you invoke make as 'make V=1' it will verbosely list what it is
-# doing, otherwise it defaults to pretty mode, which makes build
-# errors _much_ easier to see
+
+GULP      ?= node_modules/.bin/gulp
+TSLINT    ?= node_modules/.bin/tslint
+MOCHA     ?= node_modules/.bin/mocha
+
+BUILD_DEPS   = $(GULP) $(TSLINT) $(MOCHA)
+
+# quiet output, but allow us to look at what commands are being
+# executed by passing 'V=1' to make, without requiring temporarily
+# editing the Makefile.
 ifneq ($V, 1)
-MAKEFLAGS = -s
+MAKEFLAGS += -s
 endif
 
-all: check dist
+# GNU make, you are the worst.
+.SUFFIXES:
+%: %,v
+%: RCS/%,v
+%: RCS/%
+%: s.%
+%: SCCS/s.%
 
-dist: dist/btscale.js dist/btscale.min.js
+all: test
 
-lib/bower_components:
-	bower install
-	touch $@
+build lib: $(BUILD_DEPS)
+	@echo "  LIB"
+	$(GULP) lib
+
+test: $(BUILD_DEPS)
+	@echo "  TEST"
+	$(GULP)
 
 node_modules: package.json
-	npm install
-	touch $@
+	@echo "  NPM"
+	npm install --silent
+	touch -c $@
 
-node_modules/.bin/r.js: node_modules lib/bower_components
-	touch $@
-
-dist/btscale.js: node_modules/.bin/r.js build.js lib/*.js
-	mkdir -p dist
-	node_modules/.bin/r.js -o build.js
-
-dist/btscale.min.js: node_modules/.bin/r.js build_min.js lib/*.js
-	mkdir -p dist
-	node_modules/.bin/r.js -o build_min.js
-
-hint:
-	node_modules/.bin/jshint --config .jshintrc lib/*.js
+$(BUILD_DEPS): node_modules
+	touch -c $@
 
 clean:
-	rm -rf dist dist/btscale.js dist/btscale.min.js
+	rm -rf lib
+	find . -name '*~' | xargs rm -f
 
-check: node_modules lib/bower_components
-	node_modules/.bin/nodeunit test/runner.js
+distclean: clean
+	rm -rf node_modules
 
-.PHONY: all www hint jsdeps clean check
+.PHONY: all clean distclean test
