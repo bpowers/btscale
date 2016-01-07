@@ -18,7 +18,7 @@
  *
  * BSD-licensed, taken from Chromium: src/ui/webui/resources/js/cr/event_target.js
  */
-class BTSEventTarget {
+export class BTSEventTarget {
 	listeners_: any;
 
 	/**
@@ -27,7 +27,7 @@ class BTSEventTarget {
 	 * @param {EventListenerType} handler The handler for the event. This is
 	 *     called when the event is dispatched.
 	 */
-	addEventListener(type: any, handler: Function): void {
+	addEventListener(type: string, handler: Function): void {
 		if (!this.listeners_)
 			this.listeners_ = Object.create(null);
 		if (!(type in this.listeners_)) {
@@ -44,7 +44,7 @@ class BTSEventTarget {
 	 * @param {string} type The name of the event.
 	 * @param {EventListenerType} handler The handler for the event.
 	 */
-	removeEventListener(type: any, handler: Function): void {
+	removeEventListener(type: string, handler: Function): void {
 		if (!this.listeners_)
 			return;
 		if (type in this.listeners_) {
