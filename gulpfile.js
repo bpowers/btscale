@@ -12,7 +12,13 @@ var project = ts.createProject('tsconfig.json', {
 });
 var testProject = ts.createProject('tsconfig.json', { sortOutput: true });
 
-gulp.task('lib', function() {
+gulp.task('lint', function() {
+    return gulp.src('src/*.ts')
+        .pipe(lint())
+        .pipe(lint.report('verbose'));
+});
+
+gulp.task('lib', ['lint'], function() {
     var tsLib = gulp.src('src/*.ts')
         .pipe(ts(project));
 
