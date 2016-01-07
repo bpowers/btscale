@@ -39,7 +39,7 @@ $(BUILD_DEPS): node_modules
 	touch -c $@
 
 clean:
-	rm -rf lib
+	rm -rf lib test/*.js
 	find . -name '*~' | xargs rm -f
 
 distclean: clean
