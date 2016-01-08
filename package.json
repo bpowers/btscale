@@ -15,9 +15,11 @@
   },
   "dependencies": {},
   "devDependencies": {
+    "bower": "^1.7.2",
     "chai": "^3.4.1",
     "gulp": "^3.9.0",
     "gulp-mocha": "^2.2.0",
+    "gulp-requirejs-bp": "^0.1.5",
     "gulp-tslint": "^3.6.0",
     "gulp-typescript": "^2.9.2",
     "merge2": "^0.3.6",

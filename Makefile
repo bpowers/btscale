@@ -2,8 +2,10 @@
 GULP      ?= node_modules/.bin/gulp
 TSLINT    ?= node_modules/.bin/tslint
 MOCHA     ?= node_modules/.bin/mocha
+BOWER     ?= node_modules/.bin/bower
+ALMOND    ?= src/bower_components/almond/almond.js
 
-BUILD_DEPS   = $(GULP) $(TSLINT) $(MOCHA)
+BUILD_DEPS   = $(GULP) $(TSLINT) $(MOCHA) $(BOWER) $(ALMOND)
 
 # quiet output, but allow us to look at what commands are being
 # executed by passing 'V=1' to make, without requiring temporarily
@@ -30,12 +32,22 @@ test: $(BUILD_DEPS)
 	@echo "  TEST"
 	$(GULP)
 
+dist: test
+	@echo "  DIST"
+	$(GULP)
+
 node_modules: package.json
 	@echo "  NPM"
 	npm install --silent
 	touch -c $@
 
-$(BUILD_DEPS): node_modules
+src/bower_components: node_modules bower.json
+	@echo "  BOWER"
+	$(BOWER) install --silent
+	touch -c $@
+
+
+$(BUILD_DEPS): node_modules src/bower_components
 	touch -c $@
 
 clean:
@@ -45,4 +57,4 @@ clean:
 distclean: clean
 	rm -rf node_modules
 
-.PHONY: all clean distclean test
+.PHONY: all clean distclean dist test
