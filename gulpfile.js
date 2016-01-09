@@ -1,11 +1,16 @@
 'use strict';
 
+var browserify = require('browserify');
+var buffer = require('vinyl-buffer');
 var gulp = require('gulp');
-var merge = require('merge2');
-var ts = require('gulp-typescript');
-var rjs = require('gulp-requirejs-bp');
+var gutil = require('gulp-util');
 var lint = require('gulp-tslint');
+var merge = require('merge2');
 var mocha = require('gulp-mocha');
+var rename = require('gulp-rename');
+var source = require('vinyl-source-stream');
+var ts = require('gulp-typescript');
+var uglify = require('gulp-uglify');
 
 var project = ts.createProject('tsconfig.json', {
     sortOutput: true,
@@ -35,30 +40,47 @@ gulp.task('test', ['lib'], function() {
 });
 
 gulp.task('btscale.js', ['lib'], function() {
-    return rjs({
-        baseUrl: 'lib',
-        include: ['scale_finder'],
-        optimize: 'none',
-        name: '../src/bower_components/almond/almond',
-        wrap: {
-            startFile: 'src/build/start.frag.js',
-            endFile: 'src/build/end.frag.js'
-        },
-        out: 'btscale.js',
-    }).pipe(gulp.dest('.'));
+        var b = browserify({
+            entries: ['./lib/scale_finder.js'],
+            builtins: false,
+            insertGlobalVars: {
+                // don't do anything when seeing use of 'process' - we
+                // handle this ourselves.
+                'process': function() { return "" },
+                'Buffer': function() { return "" },
+                'buffer': function() { return "" },
+            },
+        });
+
+        return b.bundle()
+            .pipe(source('./lib/scale_finder.js'))
+            .pipe(buffer())
+        //  .pipe(uglify())
+            .on('error', gutil.log)
+            .pipe(rename('btscale.js'))
+            .pipe(gulp.dest('.'));
 });
 
 gulp.task('btscale.min.js', ['lib'], function() {
-    return rjs({
-        baseUrl: 'lib',
-        include: ['scale_finder'],
-        name: '../src/bower_components/almond/almond',
-        wrap: {
-            startFile: 'src/build/start.frag.js',
-            endFile: 'src/build/end.frag.js'
-        },
-        out: 'btscale.min.js',
-    }).pipe(gulp.dest('.'));
+        var b = browserify({
+            entries: ['./lib/scale_finder.js'],
+            builtins: false,
+            insertGlobalVars: {
+                // don't do anything when seeing use of 'process' - we
+                // handle this ourselves.
+                'process': function() { return "" },
+                'Buffer': function() { return "" },
+                'buffer': function() { return "" },
+            },
+        });
+
+        return b.bundle()
+            .pipe(source('./lib/scale_finder.js'))
+            .pipe(buffer())
+            .pipe(uglify())
+            .on('error', gutil.log)
+            .pipe(rename('btscale.min.js'))
+            .pipe(gulp.dest('.'));
 });
 
 gulp.task('default', ['test', 'btscale.js', 'btscale.min.js']);

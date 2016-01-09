@@ -4,11 +4,13 @@
 
 'use strict';
 
-import {SCALE_SERVICE_UUID} from './constants';
+import {SCALE_SERVICE_UUID, SCALE_CHARACTERISTIC_UUID} from './constants';
 import {BTSEventTarget} from './event_target';
 import {Scale} from './scale';
 
 declare var chrome: any;
+
+let bluetooth = (<any>navigator).bluetooth;
 
 export interface ScaleMap {
 	[addr: string]: Scale;
@@ -23,16 +25,7 @@ export class ScaleFinder extends BTSEventTarget {
 
 	constructor() {
 		super();
-
-		if (typeof chrome !== 'undefined' && chrome.bluetooth && chrome.bluetoothLowEnergy) {
-			chrome.bluetooth.onAdapterStateChanged.addListener(this.adapterStateChanged.bind(this));
-			chrome.bluetooth.onDeviceAdded.addListener(this.deviceAdded.bind(this));
-
-			chrome.bluetooth.getAdapterState(this.adapterStateChanged.bind(this));
-		} else {
-			console.log("couldn't find chrome.bluetooth APIs");
-			this.failed = true;
-		}
+		console.log('new ScaleFinder');
 	}
 
 	adapterStateChanged(adapterState: any): void {
@@ -81,7 +74,32 @@ export class ScaleFinder extends BTSEventTarget {
 	startDiscovery(): void {
 		if (this.failed)
 			return;
-		chrome.bluetooth.startDiscovery(this.logDiscovery);
+
+		let log = console.log.bind(console);
+
+		bluetooth.requestDevice(
+			{filters: [{services: [SCALE_SERVICE_UUID]}]})
+		.then((device: any) => {
+			log('> Found ' + device.name);
+			log('Connecting to GATT Server...');
+			return device.connectGATT();
+		}).then((server: any) => {
+			log('Getting Battery Service...');
+			return server.getPrimaryService(SCALE_SERVICE_UUID);
+		}).then((service: any) => {
+			log('Getting Battery Level Characteristic...');
+			return service.getCharacteristic(SCALE_CHARACTERISTIC_UUID);
+		}).then((characteristic: any) => {
+			log('Reading Battery Level...');
+			return characteristic.readValue();
+		}).then((buffer: any) => {
+			let data = new DataView(buffer);
+			let batteryLevel = data.getUint8(0);
+			log('> Battery Level is ' + batteryLevel + '%');
+		}).catch((error: any) => {
+			log('Argh! ' + error);
+			log(error);
+		});
 	}
 
 	stopDiscovery(): void {
@@ -90,3 +108,7 @@ export class ScaleFinder extends BTSEventTarget {
 		chrome.bluetooth.stopDiscovery(this.logDiscovery);
 	}
 }
+
+// install our Boot method in the global scope
+if (typeof window !== 'undefined')
+	(<any>window).ScaleFinder = ScaleFinder;

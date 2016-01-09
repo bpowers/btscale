@@ -1,0 +1,188 @@
+<!--
+Copyright 2015 Bobby Powers. All rights reserved.
+Use of this source code is governed by the MIT
+license that can be found in the LICENSE file.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="Sample illustrating the use of Web Bluetooth / Battery Level.">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Web Bluetooth / Battery Level Sample</title>
+    <script src="btscale.js"></script>
+    <script>
+      // If we're running on a real web server (as opposed to localhost, which is whitelisted),
+      // then change the protocol to HTTPS.
+      // See https://goo.gl/lq4gCo for an explanation as to why this is needed for some features.
+      (function() {
+        var isLocalhost = !!(window.location.hostname === 'localhost' ||
+          // [::1] is the IPv6 localhost address.
+          window.location.hostname === '[::1]' ||
+          // 127.0.0.1/8 is considered localhost for IPv4.
+          window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/));
+        if (window.location.protocol === 'http:' && !isLocalhost) {
+          // Redirect to https: if we're currently using http: and we're not on localhost.
+          window.location.protocol = 'https:';
+        }
+      })();
+
+      // Add a global error event listener early on in the page load, to help ensure that browsers
+      // which don't support specific functionality still end up displaying a meaningful message.
+      window.addEventListener('error', function(error) {
+        if (ChromeSamples && ChromeSamples.setStatus) {
+          ChromeSamples.setStatus(error.message + ' (Your browser may not support this feature.)');
+          error.preventDefault();
+        }
+      });
+    </script>
+
+
+    <link rel="icon" href="../images/favicon.ico">
+    <link rel="stylesheet" href="../styles/main.css">
+
+
+  </head>
+
+  <body>
+    <h1>Web Bluetooth / Battery Level Sample</h1>
+    <p>
+      Available in <a target="_blank" href="https://www.chromestatus.com/feature/5264933985976320">Chrome 45+</a> |
+      <a target="_blank" href="view-source:https://googlechrome.github.io/samples/web-bluetooth/battery-level.html">View Source</a> |
+      <a target="_blank" href="https://github.com/googlechrome/samples/blob/gh-pages/web-bluetooth/battery-level.html">View on GitHub</a> |
+      <a target="_blank" href="https://www.chromestatus.com/samples">Browse Samples</a>
+    </p>
+    <p>The <a href="https://github.com/WebBluetoothCG/web-bluetooth">Web Bluetooth
+  API</a> discovers and communicates with devices over the Bluetooth 4 wireless
+standard using the Generic Attribute Profile (GATT). It is currently only
+partially implemented in Chrome OS and Android M behind the experimental flag
+<code>chrome://flags/#enable-web-bluetooth</code>. Check out all <a href="
+https://googlechrome.github.io/samples/web-bluetooth/">Web Bluetooth Samples</a>.</p>
+
+
+<p>This sample illustrates the use of the Web Bluetooth API to retrieve battery
+information from a nearby Bluetooth Device advertising Battery information with
+Bluetooth Low Energy. You may want to try this demo with the BLE Peripheral
+Simulator App from the <a target="_blank"
+href="https://play.google.com/store/apps/details?id=io.github.webbluetoothcg.bletestperipheral">Google
+Play Store</a>.</p>
+
+<button>Get Bluetooth Device's Battery Level</button>
+
+<script>
+  var ChromeSamples = {
+    log: function() {
+      var line = Array.prototype.slice.call(arguments).map(function(argument) {
+        return typeof argument === 'string' ? argument : JSON.stringify(argument);
+      }).join(' ');
+
+      document.querySelector('#log').textContent += line + '\n';
+    },
+
+    clearLog: function() {
+      document.querySelector('#log').textContent = '';
+    },
+
+    setStatus: function(status) {
+      document.querySelector('#status').textContent = status;
+    },
+
+    setContent: function(newContent) {
+      var content = document.querySelector('#content');
+      while(content.hasChildNodes()) {
+        content.removeChild(content.lastChild);
+      }
+      content.appendChild(newContent);
+    }
+  };
+</script>
+
+<h3>Live Output</h3>
+<div id="output" class="output">
+  <div id="content"></div>
+  <div id="status"></div>
+  <pre id="log"></pre>
+</div>
+
+
+
+
+
+      <script>
+var sf = new ScaleFinder();
+function onButtonClick() {
+        'use strict';
+
+        sf.startDiscovery();
+}
+</script>
+
+
+
+
+    <h3>JavaScript Snippet</h3>
+
+
+
+    <div class="highlight"><pre><code class="language-js" data-lang="js"><span class="kd">function</span> <span class="nx">onButtonClick</span><span class="p">()</span> <span class="p">{</span>
+  <span class="s1">&#39;use strict&#39;</span><span class="p">;</span>
+
+  <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Requesting Bluetooth Device...&#39;</span><span class="p">);</span>
+  <span class="nx">navigator</span><span class="p">.</span><span class="nx">bluetooth</span><span class="p">.</span><span class="nx">requestDevice</span><span class="p">(</span>
+    <span class="p">{</span><span class="nx">filters</span><span class="o">:</span> <span class="p">[{</span><span class="nx">services</span><span class="o">:</span> <span class="p">[</span><span class="s1">&#39;battery_service&#39;</span><span class="p">]}]})</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">device</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;&gt; Found &#39;</span> <span class="o">+</span> <span class="nx">device</span><span class="p">.</span><span class="nx">name</span><span class="p">);</span>
+    <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Connecting to GATT Server...&#39;</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">device</span><span class="p">.</span><span class="nx">connectGATT</span><span class="p">();</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">server</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Getting Battery Service...&#39;</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">server</span><span class="p">.</span><span class="nx">getPrimaryService</span><span class="p">(</span><span class="s1">&#39;battery_service&#39;</span><span class="p">);</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">service</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Getting Battery Level Characteristic...&#39;</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">service</span><span class="p">.</span><span class="nx">getCharacteristic</span><span class="p">(</span><span class="s1">&#39;battery_level&#39;</span><span class="p">);</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">characteristic</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Reading Battery Level...&#39;</span><span class="p">);</span>
+    <span class="k">return</span> <span class="nx">characteristic</span><span class="p">.</span><span class="nx">readValue</span><span class="p">();</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">buffer</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">let</span> <span class="nx">data</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">DataView</span><span class="p">(</span><span class="nx">buffer</span><span class="p">);</span>
+    <span class="kd">let</span> <span class="nx">batteryLevel</span> <span class="o">=</span> <span class="nx">data</span><span class="p">.</span><span class="nx">getUint8</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+    <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;&gt; Battery Level is &#39;</span> <span class="o">+</span> <span class="nx">batteryLevel</span> <span class="o">+</span> <span class="s1">&#39;%&#39;</span><span class="p">);</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">error</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Argh! &#39;</span> <span class="o">+</span> <span class="nx">error</span><span class="p">);</span>
+  <span class="p">});</span>
+<span class="p">}</span></code></pre></div>
+
+
+
+
+<script>
+  document.querySelector('button').addEventListener('click', function() {
+    if (!navigator.bluetooth) {
+      ChromeSamples.setStatus('Web Bluetooth API is not available.\n' +
+        'Please make sure the Web Bluetooth flag is enabled.');
+    } else {
+      ChromeSamples.clearLog();
+      onButtonClick();
+    }
+  });
+  log = ChromeSamples.log;
+</script>
+
+
+    <script>
+      /* jshint ignore:start */
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+      ga('create', 'UA-53563471-1', 'auto');
+      ga('send', 'pageview');
+      /* jshint ignore:end */
+    </script>
+  </body>
+</html>
