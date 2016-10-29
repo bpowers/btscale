@@ -75,6 +75,8 @@ export class ScaleFinder extends BTSEventTarget {
 		if (this.failed)
 			return;
 
+		let _device: any = null;
+
 		let log = console.log.bind(console);
 
 		bluetooth.requestDevice(
@@ -82,24 +84,64 @@ export class ScaleFinder extends BTSEventTarget {
 		.then((device: any) => {
 			log('> Found ' + device.name);
 			log('Connecting to GATT Server...');
-			return device.connectGATT();
+
+			_device = device;
+
+			// Human-readable name of the device.
+			console.log(device.name);
+			// Filtered UUIDs of GATT services the website origin has access to.
+			console.log(device.uuids);
+			for (let i = 0; i < device.uuids.length; i++) {
+				if (SCALE_SERVICE_UUID === device.uuids[i])
+					console.log('WE ARE LISTED');
+			}
+
+			return device.gatt.connect();
 		}).then((server: any) => {
-			log('Getting Battery Service...');
-			return server.getPrimaryService(SCALE_SERVICE_UUID);
+			log('Getting primary service...');
+
+			console.log(server);
+
+			return _device.gatt.getPrimaryService(SCALE_SERVICE_UUID);
+		}, (err: any) : any => {
+			console.log('ERRRR - ' + err);
+			debugger;
+			return null;
 		}).then((service: any) => {
-			log('Getting Battery Level Characteristic...');
+			console.log('primary services ');
 			return service.getCharacteristic(SCALE_CHARACTERISTIC_UUID);
+		}, (err: any) => {
+			console.log('primary services ERR - ' + err);
+			debugger;
 		}).then((characteristic: any) => {
 			log('Reading Battery Level...');
 			return characteristic.readValue();
+		}, (err: any) => {
+			console.log('err getting characteristic');
+			debugger;
 		}).then((buffer: any) => {
 			let data = new DataView(buffer);
 			let batteryLevel = data.getUint8(0);
 			log('> Battery Level is ' + batteryLevel + '%');
-		}).catch((error: any) => {
-			log('Argh! ' + error);
-			log(error);
+			debugger;
+		}, (err: any) => {
+			console.log('err reading val');
+			debugger;
+		}).catch((err: any) => {
+			debugger;
 		});
+
+		// ).then((characteristic: any) => {
+		// 	log('Reading Battery Level...');
+		// 	return characteristic.readValue();
+		// }).then((buffer: any) => {
+		// 	let data = new DataView(buffer);
+		// 	let batteryLevel = data.getUint8(0);
+		// 	log('> Battery Level is ' + batteryLevel + '%');
+		// }).catch((error: any) => {
+		// 	log('Argh! ' + error);
+		// 	log(error);
+		// });
 	}
 
 	stopDiscovery(): void {
