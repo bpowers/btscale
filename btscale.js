@@ -510,23 +510,6 @@ var ScaleFinder = (function (_super) {
         this.failed = false;
         console.log('new ScaleFinder');
     }
-    ScaleFinder.prototype.adapterStateChanged = function (adapterState) {
-        if (chrome.runtime.lastError) {
-            console.log('adapter state changed: ' + chrome.runtime.lastError.message);
-            return;
-        }
-        console.log('adapter state changed');
-        console.log(adapterState);
-        var shouldDispatchReady = !this.adapterState;
-        var shouldDispatchDiscovery = this.adapterState && this.adapterState.discovering !== adapterState.discovering;
-        this.adapterState = adapterState;
-        if (shouldDispatchReady)
-            this.dispatchEvent(new Event('ready'));
-        if (shouldDispatchDiscovery) {
-            var event_1 = new CustomEvent('discoveryStateChanged', { 'detail': { 'discovering': adapterState.discovering } });
-            this.dispatchEvent(event_1);
-        }
-    };
     ScaleFinder.prototype.deviceAdded = function (device) {
         if (device.address in this.devices) {
             console.log('WARN: device added that is already known ' + device.address);
@@ -535,12 +518,6 @@ var ScaleFinder = (function (_super) {
         var scale = new scale_1.Scale(device);
         this.devices[device.address] = scale;
         this.scales.push(scale);
-    };
-    ScaleFinder.prototype.logDiscovery = function () {
-        if (chrome.runtime.lastError) {
-            var msg = chrome.runtime.lastError.message;
-            console.log('Failed to frob discovery: ' + msg);
-        }
     };
     ScaleFinder.prototype.startDiscovery = function () {
         var _this = this;

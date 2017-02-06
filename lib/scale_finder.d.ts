@@ -10,9 +10,7 @@ export declare class ScaleFinder extends BTSEventTarget {
     adapterState: any;
     failed: boolean;
     constructor();
-    adapterStateChanged(adapterState: any): void;
     deviceAdded(device: any): void;
-    logDiscovery(): void;
     startDiscovery(): void;
     stopDiscovery(): void;
 }

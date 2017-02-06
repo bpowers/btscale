@@ -28,29 +28,6 @@ export class ScaleFinder extends BTSEventTarget {
 		console.log('new ScaleFinder');
 	}
 
-	adapterStateChanged(adapterState: any): void {
-		if (chrome.runtime.lastError) {
-			console.log('adapter state changed: ' + chrome.runtime.lastError.message);
-			return;
-		}
-		console.log('adapter state changed');
-		console.log(adapterState);
-
-		let shouldDispatchReady = !this.adapterState;
-		let shouldDispatchDiscovery = this.adapterState && this.adapterState.discovering !== adapterState.discovering;
-
-		this.adapterState = adapterState;
-
-		if (shouldDispatchReady)
-			this.dispatchEvent(new Event('ready'));
-		if (shouldDispatchDiscovery) {
-			let event = new CustomEvent(
-				'discoveryStateChanged',
-				{'detail': {'discovering': adapterState.discovering}});
-			this.dispatchEvent(event);
-		}
-	}
-
 	deviceAdded(device: any): void {
 		if (device.address in this.devices) {
 			console.log('WARN: device added that is already known ' + device.address);
@@ -59,13 +36,6 @@ export class ScaleFinder extends BTSEventTarget {
 		let scale = new Scale(device);
 		this.devices[device.address] = scale;
 		this.scales.push(scale);
-	}
-
-	logDiscovery(): void {
-		if (chrome.runtime.lastError) {
-			let msg = chrome.runtime.lastError.message;
-			console.log('Failed to frob discovery: ' + msg);
-		}
 	}
 
 	startDiscovery(): void {
@@ -77,55 +47,6 @@ export class ScaleFinder extends BTSEventTarget {
 			.then((device: any) => {
 				this.deviceAdded(device);
 			});
-		//.then((server: any) => {
-		// 		log('Getting primary service...');
-
-		// 	console.log(server);
-
-		// 	return _device.gatt.getPrimaryService(SCALE_SERVICE_UUID);
-		// }, (err: any) : any => {
-		// 	console.log('ERRRR - ' + err);
-		// 	debugger;
-		// 	return null;
-		// }).then((service: any) => {
-		// 	console.log('primary services ');
-		// 	return service.getCharacteristic(SCALE_CHARACTERISTIC_UUID);
-		// }, (err: any) => {
-		// 	console.log('primary services ERR - ' + err);
-		// 	debugger;
-		// }).then((characteristic: any) => {
-		// 	log('Starting notifications...');
-		// 	return characteristic.startNotifications();
-		// }, (err: any) => {
-		// 	console.log('err getting characteristic');
-		// 	debugger;
-		// }).then((characteristic: any) => {
-		// 	characteristic.addEventListener('characteristicvaluechanged', (val: any) => {
-
-		// 	});
-		// 	debugger;
-		// 	let data = new DataView(buffer);
-		// 	let batteryLevel = data.getUint8(0);
-		// 	log('> Battery Level is ' + batteryLevel + '%');
-		// 	debugger;
-		// }, (err: any) => {
-		// 	console.log('err reading val');
-		// 	debugger;
-		// }).catch((err: any) => {
-		// 	debugger;
-		// });:
-
-		// ).then((characteristic: any) => {
-		// 	log('Reading Battery Level...');
-		// 	return characteristic.readValue();
-		// }).then((buffer: any) => {
-		// 	let data = new DataView(buffer);
-		// 	let batteryLevel = data.getUint8(0);
-		// 	log('> Battery Level is ' + batteryLevel + '%');
-		// }).catch((error: any) => {
-		// 	log('Argh! ' + error);
-		// 	log(error);
-		// });
 	}
 
 	stopDiscovery(): void {
