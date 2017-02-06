@@ -12,14 +12,9 @@ export declare class Scale extends BTSEventTarget {
     series: Array<[number, number]>;
     constructor(device: any);
     connect(): void;
-    deviceConnected(): void;
-    serviceAdded(service: any): void;
-    servicesAdded(services: any): void;
     characteristicValueChanged(event: any): void;
     disconnect(): void;
-    allCharacteristics(characteristics: any): void;
     notificationsReady(): void;
-    logError(): void;
     tare(): boolean;
     startTimer(): boolean;
     pauseTimer(): boolean;

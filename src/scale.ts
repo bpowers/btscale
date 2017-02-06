@@ -30,6 +30,7 @@ export class Scale extends BTSEventTarget {
 		this.name = this.device.name;
 
 		console.log('created scale for ' + this.device.address + ' (' + this.device.name + ')');
+		this.connect();
 	}
 
 
@@ -37,51 +38,41 @@ export class Scale extends BTSEventTarget {
 		if (this.connected)
 			return;
 
-		chrome.bluetoothLowEnergy.onServiceAdded.addListener(
-			this.serviceAdded.bind(this));
-		chrome.bluetoothLowEnergy.onCharacteristicValueChanged.addListener(
-			this.characteristicValueChanged.bind(this));
+		let log = console.log.bind(console);
 
-		chrome.bluetoothLowEnergy.connect(
-			this.device.address,
-			{'persistent': true},
-			this.deviceConnected.bind(this));
-	}
-
-	deviceConnected(): void {
-		if (chrome.runtime.lastError) {
-			console.log('connect failed: ' + chrome.runtime.lastError.message);
-			return;
-		}
-		chrome.bluetoothLowEnergy.getServices(
-			this.device.address,
-			this.servicesAdded.bind(this));
-	}
-
-	serviceAdded(service: any): void {
-		if (service.uuid !== SCALE_SERVICE_UUID)
-			return;
-		if (this.service)
-			return;
-
-		this.service = service;
-
-		chrome.bluetoothLowEnergy.getCharacteristics(
-			this.service.instanceId,
-			this.allCharacteristics.bind(this));
-	}
-
-	servicesAdded(services: any): void {
-		for (let i in services) {
-			if (!services.hasOwnProperty(i))
-				continue;
-			let service = services[i];
-			this.serviceAdded(service);
-		}
+		this.device.gatt.connect()
+			.then((server: any) => {
+				return this.device.gatt.getPrimaryService(SCALE_SERVICE_UUID);
+			}, (err: any) : any => {
+				console.log('error connecting - ' + err);
+				return null;
+			}).then((service: any) => {
+				this.service = service;
+				console.log('primary services ');
+				return service.getCharacteristic(SCALE_CHARACTERISTIC_UUID);
+			}, (err: any) => {
+				console.log('primary services ERR - ' + err);
+				debugger;
+			}).then((characteristic: any) => {
+				log('Starting notifications...');
+				this.characteristic = characteristic;
+				return characteristic.startNotifications();
+			}, (err: any) => {
+				console.log('err getting characteristic');
+				debugger;
+			}).then((characteristic: any) => {
+				characteristic.addEventListener(
+					'characteristicvaluechanged',
+					this.characteristicValueChanged.bind(this));
+				this.notificationsReady();
+			}, (err: any) => {
+				log('FAILED: ' + err);
+				debugger;
+			});
 	}
 
 	characteristicValueChanged(event: any): void {
-		let msg = packet.decode(event.value);
+		let msg = packet.decode(event.target.value.buffer);
 		if (!msg) {
 			console.log('characteristic value update, but no message');
 			return;
@@ -113,45 +104,11 @@ export class Scale extends BTSEventTarget {
 
 	disconnect(): void {
 		this.connected = false;
-		chrome.bluetoothLowEnergy.disconnect(this.device.address);
-	}
-
-	allCharacteristics(characteristics: any): void {
-		if (chrome.runtime.lastError) {
-			console.log(
-				'failed listing characteristics: ' +
-					chrome.runtime.lastError.message);
-			return;
-		}
-
-		let found = false;
-		for (let i = 0; i < characteristics.length; i++) {
-			if (characteristics[i].uuid === SCALE_CHARACTERISTIC_UUID) {
-				this.characteristic = characteristics[i];
-				found = true;
-				break;
-			}
-		}
-
-		if (found) {
-			chrome.bluetoothLowEnergy.startCharacteristicNotifications(
-				this.characteristic.instanceId,
-				this.notificationsReady.bind(this));
-		} else {
-			console.log('scale doesnt have required characteristic');
-			console.log(characteristics);
-		}
+		if (this.device)
+			this.device.gatt.connect();
 	}
 
 	notificationsReady(): void {
-		if (chrome.runtime.lastError) {
-			console.log(
-				'failed enabling characteristic notifications: ' +
-					chrome.runtime.lastError.message);
-			// FIXME(bp) exit early once this call succeeds on android.
-			//return;
-		}
-
 		console.log('scale ready');
 
 		this.connected = true;
@@ -162,19 +119,16 @@ export class Scale extends BTSEventTarget {
 		this.dispatchEvent(new CustomEvent('ready', {'detail': {'scale': this}}));
 	}
 
-	logError(): void {
-		if (chrome.runtime.lastError)
-			console.log('bluetooth call failed: ' + chrome.runtime.lastError.message);
-	}
-
 	tare(): boolean {
 		if (!this.connected)
 			return false;
 
 		let msg = packet.encodeTare();
-
-		chrome.bluetoothLowEnergy.writeCharacteristicValue(
-			this.characteristic.instanceId, msg, this.logError.bind(this));
+		this.characteristic.writeValue(msg)
+			.then(() => {
+			}, (err: any) => {
+				console.log('write failed: ' + err);
+			});
 
 		return true;
 	}
@@ -184,9 +138,11 @@ export class Scale extends BTSEventTarget {
 			return false;
 
 		let msg = packet.encodeStartTimer();
-
-		chrome.bluetoothLowEnergy.writeCharacteristicValue(
-			this.characteristic.instanceId, msg, this.logError.bind(this));
+		this.characteristic.writeValue(msg)
+			.then(() => {
+			}, (err: any) => {
+				console.log('write failed: ' + err);
+			});
 
 		return true;
 	}
@@ -196,9 +152,11 @@ export class Scale extends BTSEventTarget {
 			return false;
 
 		let msg = packet.encodePauseTimer();
-
-		chrome.bluetoothLowEnergy.writeCharacteristicValue(
-			this.characteristic.instanceId, msg, this.logError.bind(this));
+		this.characteristic.writeValue(msg)
+			.then(() => {
+			}, (err: any) => {
+				console.log('write failed: ' + err);
+			});
 
 		return true;
 	}
@@ -208,9 +166,11 @@ export class Scale extends BTSEventTarget {
 			return false;
 
 		let msg = packet.encodeStopTimer();
-
-		chrome.bluetoothLowEnergy.writeCharacteristicValue(
-			this.characteristic.instanceId, msg, this.logError.bind(this));
+		this.characteristic.writeValue(msg)
+			.then(() => {
+			}, (err: any) => {
+				console.log('write failed: ' + err);
+			});
 
 		return true;
 	};
@@ -223,9 +183,11 @@ export class Scale extends BTSEventTarget {
 			count = 1;
 
 		let msg = packet.encodeGetTimer(count);
-
-		chrome.bluetoothLowEnergy.writeCharacteristicValue(
-			this.characteristic.instanceId, msg, this.logError.bind(this));
+		this.characteristic.writeValue(msg)
+			.then(() => {
+			}, (err: any) => {
+				console.log('write failed: ' + err);
+			});
 
 		return true;
 	}
@@ -237,9 +199,11 @@ export class Scale extends BTSEventTarget {
 		this.batteryCb = cb;
 
 		let msg = packet.encodeGetBattery();
-
-		chrome.bluetoothLowEnergy.writeCharacteristicValue(
-			this.characteristic.instanceId, msg, this.logError.bind(this));
+		this.characteristic.writeValue(msg)
+			.then(() => {
+			}, (err: any) => {
+				console.log('write failed: ' + err);
+			});
 
 		return true;
 	}
@@ -249,9 +213,11 @@ export class Scale extends BTSEventTarget {
 			return false;
 
 		let msg = packet.encodeWeight();
-
-		chrome.bluetoothLowEnergy.writeCharacteristicValue(
-			this.characteristic.instanceId, msg, this.logError.bind(this));
+		this.characteristic.writeValue(msg)
+			.then(() => {
+			}, (err: any) => {
+				console.log('write failed: ' + err);
+			});
 
 		return true;
 	}

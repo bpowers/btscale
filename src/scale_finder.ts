@@ -52,9 +52,6 @@ export class ScaleFinder extends BTSEventTarget {
 	}
 
 	deviceAdded(device: any): void {
-		if (!device.uuids || device.uuids.indexOf(SCALE_SERVICE_UUID) < 0)
-			return;
-
 		if (device.address in this.devices) {
 			console.log('WARN: device added that is already known ' + device.address);
 			return;
@@ -75,61 +72,48 @@ export class ScaleFinder extends BTSEventTarget {
 		if (this.failed)
 			return;
 
-		let _device: any = null;
-
-		let log = console.log.bind(console);
-
 		bluetooth.requestDevice(
 			{filters: [{services: [SCALE_SERVICE_UUID]}]})
-		.then((device: any) => {
-			log('> Found ' + device.name);
-			log('Connecting to GATT Server...');
+			.then((device: any) => {
+				this.deviceAdded(device);
+			});
+		//.then((server: any) => {
+		// 		log('Getting primary service...');
 
-			_device = device;
+		// 	console.log(server);
 
-			// Human-readable name of the device.
-			console.log(device.name);
-			// Filtered UUIDs of GATT services the website origin has access to.
-			console.log(device.uuids);
-			for (let i = 0; i < device.uuids.length; i++) {
-				if (SCALE_SERVICE_UUID === device.uuids[i])
-					console.log('WE ARE LISTED');
-			}
+		// 	return _device.gatt.getPrimaryService(SCALE_SERVICE_UUID);
+		// }, (err: any) : any => {
+		// 	console.log('ERRRR - ' + err);
+		// 	debugger;
+		// 	return null;
+		// }).then((service: any) => {
+		// 	console.log('primary services ');
+		// 	return service.getCharacteristic(SCALE_CHARACTERISTIC_UUID);
+		// }, (err: any) => {
+		// 	console.log('primary services ERR - ' + err);
+		// 	debugger;
+		// }).then((characteristic: any) => {
+		// 	log('Starting notifications...');
+		// 	return characteristic.startNotifications();
+		// }, (err: any) => {
+		// 	console.log('err getting characteristic');
+		// 	debugger;
+		// }).then((characteristic: any) => {
+		// 	characteristic.addEventListener('characteristicvaluechanged', (val: any) => {
 
-			return device.gatt.connect();
-		}).then((server: any) => {
-			log('Getting primary service...');
-
-			console.log(server);
-
-			return _device.gatt.getPrimaryService(SCALE_SERVICE_UUID);
-		}, (err: any) : any => {
-			console.log('ERRRR - ' + err);
-			debugger;
-			return null;
-		}).then((service: any) => {
-			console.log('primary services ');
-			return service.getCharacteristic(SCALE_CHARACTERISTIC_UUID);
-		}, (err: any) => {
-			console.log('primary services ERR - ' + err);
-			debugger;
-		}).then((characteristic: any) => {
-			log('Reading Battery Level...');
-			return characteristic.readValue();
-		}, (err: any) => {
-			console.log('err getting characteristic');
-			debugger;
-		}).then((buffer: any) => {
-			let data = new DataView(buffer);
-			let batteryLevel = data.getUint8(0);
-			log('> Battery Level is ' + batteryLevel + '%');
-			debugger;
-		}, (err: any) => {
-			console.log('err reading val');
-			debugger;
-		}).catch((err: any) => {
-			debugger;
-		});
+		// 	});
+		// 	debugger;
+		// 	let data = new DataView(buffer);
+		// 	let batteryLevel = data.getUint8(0);
+		// 	log('> Battery Level is ' + batteryLevel + '%');
+		// 	debugger;
+		// }, (err: any) => {
+		// 	console.log('err reading val');
+		// 	debugger;
+		// }).catch((err: any) => {
+		// 	debugger;
+		// });:
 
 		// ).then((characteristic: any) => {
 		// 	log('Reading Battery Level...');
@@ -147,7 +131,6 @@ export class ScaleFinder extends BTSEventTarget {
 	stopDiscovery(): void {
 		if (this.failed)
 			return;
-		chrome.bluetooth.stopDiscovery(this.logDiscovery);
 	}
 }
 
